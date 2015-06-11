@@ -35,7 +35,9 @@ public class RunKafkaFeeder {
         while (true) {
             String nxtMessage = StringUtils.join(nextEventList(), ' ');
             System.out.println("sending nextEventList = " + nxtMessage);
-            producer.send(new KeyedMessage<String, String>(StreamingProperties.kafkaTopic, nxtMessage));
+
+            //store the message in kafka here
+
             Thread.sleep(500);
         }
     }

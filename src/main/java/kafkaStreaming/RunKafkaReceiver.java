@@ -71,6 +71,7 @@ public class RunKafkaReceiver {
 
         System.out.println("Setup kafka streaming on topic: " + StreamingProperties.kafkaTopic);
 
+        // process the stream here
         // basicWordsMapAndSave(lineStream);
 
 
