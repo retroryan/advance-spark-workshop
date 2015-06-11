@@ -1,31 +1,35 @@
 package kafkaStreaming;
 
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.HashMap;
+
+
 import com.datastax.driver.core.Session;
 import com.datastax.spark.connector.cql.CassandraConnector;
-import com.google.common.collect.Lists;
-import org.apache.spark.api.java.StorageLevels;
-import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.Function2;
-import org.apache.spark.api.java.function.PairFunction;
-import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.StreamingContext;
-import org.apache.spark.streaming.api.java.*;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import scala.Tuple2;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.streaming.Duration;
+import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaPairDStream;
+import org.apache.spark.streaming.api.java.JavaPairReceiverInputDStream;
+import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.kafka.KafkaUtils;
+
 import simpleSpark.SparkConfSetup;
 
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-
-import org.apache.spark.streaming.kafka.*;
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
+import static com.datastax.spark.connector.japi.CassandraStreamingJavaUtil.javaFunctions;
 
 public class RunKafkaReceiver {
 
-    public static Duration getDurationsSeconds(int seconds) {
+   public static Duration getDurationsSeconds(int seconds) {
         return new Duration(seconds * 1000);
     }
 
@@ -36,59 +40,38 @@ public class RunKafkaReceiver {
 
     public static void main(String[] args) {
 
-        if (args.length < 2) {
-            System.out.println("need to pass zookeper host at command line, i.e. localhost 2181");
+        if (args.length < 1) {
+            System.out.println("need to pass zookeeper host at command line, i.e.  localhost:9092");
             System.exit(-1);
         }
 
-        String hostname = args[0];
-        String tmpPort = args[1];
-        int port = Integer.parseInt(tmpPort);
+        String zookeeperHost = args[0];
+        System.out.println("starting listening on zookeeper = " + zookeeperHost);
 
         CassandraConnector connector = SparkConfSetup.getCassandraConnector();
         setupCassandraTables(connector);
 
-        JavaStreamingContext javaStreamingContext = getJavaStreamingContext(getDurationsSeconds(1));
+        // Create the context with a 5 second batch size
+        JavaStreamingContext javaStreamingContext = getJavaStreamingContext(getDurationsSeconds(5));
 
-        int numThreads = Integer.parseInt(args[3]);
+        int numThreads = 1;
         Map<String, Integer> topicMap = new HashMap<String, Integer>();
+        topicMap.put(StreamingProperties.kafkaTopic, numThreads);
+
+/*
+        int numThreads = Integer.parseInt(args[3]);
         String[] topics = args[2].split(",");
         for (String topic: topics) {
             topicMap.put(topic, numThreads);
         }
+*/
 
         JavaPairReceiverInputDStream<String, String> messages =
-                KafkaUtils.createStream(javaStreamingContext, args[0], args[1], topicMap);
+                KafkaUtils.createStream(javaStreamingContext, zookeeperHost, StreamingProperties.kafkaConsumerGroup, topicMap);
 
-        JavaDStream<String> lineStream = messages.map(new Function<Tuple2<String, String>, String>() {
-            @Override
-            public String call(Tuple2<String, String> tuple2) {
-                return tuple2._2();
-            }
-        });
+        System.out.println("Setup kafka streaming on topic: " + StreamingProperties.kafkaTopic);
 
-        JavaDStream<String> words = lines.flatMap(new FlatMapFunction<String, String>() {
-            @Override
-            public Iterable<String> call(String x) {
-                return Lists.newArrayList(SPACE.split(x));
-            }
-        });
-
-        JavaPairDStream<String, Integer> wordCounts = words.mapToPair(
-                new PairFunction<String, String, Integer>() {
-                    @Override
-                    public Tuple2<String, Integer> call(String s) {
-                        return new Tuple2<String, Integer>(s, 1);
-                    }
-                }).reduceByKey(new Function2<Integer, Integer, Integer>() {
-            @Override
-            public Integer call(Integer i1, Integer i2) {
-                return i1 + i2;
-            }
-        });
-
-        wordCounts.print();
-        basicWordsMapAndSave(lineStream);
+        // basicWordsMapAndSave(lineStream);
 
 
         javaStreamingContext.start();
@@ -96,9 +79,10 @@ public class RunKafkaReceiver {
     }
 
 
-    private static void basicWordsMapAndSave(JavaReceiverInputDStream<String> lines) {
-        //map word count and save to cassandra
+    private static void basicWordsMapAndSave(JavaDStream<String> lines) {
+
     }
+
 
     private static void setupCassandraTables(CassandraConnector connector) {
         try (Session session = connector.openSession()) {

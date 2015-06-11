@@ -18,11 +18,16 @@ These underlying RDD transformations are computed by the Spark engine. The DStre
 
 ##Exercise 1 - Listen to a socket to receive a basic text stream.  Perform a windowing word count on the text socket.
 
-* To start the word socket server run `./runWordServer.sh`
+* To start the word socket server run
+`java -jar AdvanceSpark-0.1-jar-with-dependencies.jar 172.31.1.127 8050`
 
 * This starts the word socket server defined in `simpleStreaming.RunFeeder`
 
-* To build and submit the Spark Job run `./compileAndRunStreamDemo.sh`
+* To build and submit the Spark Job run
+```
+mvn install
+dse spark-submit --class simpleStreaming.RunReceiver ./target/IntroSparkCassandra-0.0.1-SNAPSHOT.jar
+```
 
 * The template for this exercise is found in `simpleStreaming.RunReceiver`
 
@@ -49,13 +54,15 @@ javaStreamingContext.checkpoint("/tmp/spark");
 lineStream.checkpoint(getDurationsSeconds(30));
 ```
 
+##Exercise 2 - Window Functions on Streams
+
 * Similar to the previous word count, create a word count of the stream of words as they are received.  
 
 * Windowed operation operate on sliding window of data, for example if the batch is recieving data every 5 seconds then the following image would show working on the last 15 seconds of data:
 
 ![](https://spark.apache.org/docs/latest/img/streaming-dstream-window.png)
 
-* Instead of keeping a count of every batch of words received instead  create a word count of the words received in the past 30 seconds every 10 seconds using `reduceByKeyAndWindow`
+* Instead of keeping a count of every batch of words received instead create a word count of the words received in the past 30 seconds every 10 seconds using `reduceByKeyAndWindow`
 
 * How would you data model this in Cassandra?
 

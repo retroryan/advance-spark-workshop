@@ -8,7 +8,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 public interface SparkConfSetup {
 
     //DSE Host is the IP of the Spark Master started by DSE
-    String DSE_HOST = "172.31.9.194";
+    String DSE_HOST = "localhost";
 
     //Driver Host is the ip of the application running the spark application
     //String DRIVER_HOST = "127.0.0.1";
